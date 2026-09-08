@@ -102,11 +102,11 @@ class Screen(models.Model):
             page.screenshot(path=f"/{folder}/screen.png")
             browser.close()
 
-        # See trmnl/consumers.py's PreviewConsumer for why this is
-        # equivalent to the previous wand/ImageMagick pipeline, not just
-        # similar to it.
+        # See trmnl/consumers.py's PreviewConsumer for the dither=NONE
+        # reasoning - the display is hard on/off, not one that benefits
+        # from a halftone pattern.
         with Image.open(f"/{folder}/screen.png") as img:
-            img = img.convert("L").convert("1")
+            img = img.convert("L").convert("1", dither=Image.Dither.NONE)
             img.save(f"/{folder}/screen.bmp", format="BMP")
 
         with open(f"/{folder}/screen.bmp", "rb") as f:

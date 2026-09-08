@@ -57,15 +57,17 @@ class PreviewConsumer(AsyncWebsocketConsumer):
         )
         await self.page.screenshot(path=f"/{folder}/screen.png")
 
-        # Replaces the previous wand/ImageMagick pipeline (posterize +
-        # composite against a pattern:gray50 map + quantize) with Pillow's
-        # own 1-bit conversion, which already Floyd-Steinberg dithers by
-        # default - the gray50 composite step had no visible effect on an
-        # opaque screenshot with no alpha channel (compositing a fully
-        # opaque image "over" anything just replaces it), so this should
-        # be visually equivalent, not just similar.
+        # Replaces the previous wand/ImageMagick pipeline. dither=NONE is
+        # deliberate, not a default left in place - confirmed via a real
+        # side-by-side (see PR description): the display is a hard on/off
+        # panel, not one that benefits from a halftone dither pattern, so
+        # this matches the flat-threshold behavior the current production
+        # pipeline already produces (its own dither="floyd_steinberg" step
+        # gets discarded by a later quantize() call - confirmed live, not
+        # actually dithering today either) rather than introducing texture
+        # the display can't render as intended.
         with Image.open(f"/{folder}/screen.png") as img:
-            img = img.convert("L").convert("1")
+            img = img.convert("L").convert("1", dither=Image.Dither.NONE)
             img.save(f"/{folder}/screen.bmp", format="BMP")
 
         with open(f"/{folder}/screen.bmp", "rb") as f:

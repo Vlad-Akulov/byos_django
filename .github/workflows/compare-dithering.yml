@@ -59,12 +59,12 @@ jobs:
               img.save(filename='bmp3:old-wand.bmp')
           "
 
-      - name: New pipeline (Pillow) - exact code from this branch
+      - name: New pipeline (Pillow, dither=NONE) - exact code from this branch
         run: |
           python3 -c "
           from PIL import Image
           with Image.open('screen.png') as img:
-              img = img.convert('L').convert('1')
+              img = img.convert('L').convert('1', dither=Image.Dither.NONE)
               img.save('new-pillow.bmp', format='BMP')
           "
 
