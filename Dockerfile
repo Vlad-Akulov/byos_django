@@ -8,14 +8,9 @@ FROM python:3.13-slim
 WORKDIR /src
 
 # done first so we can cache dependencies between code changes
-COPY Pipfile ./
-# Pipfile.lock isn't committed on this experimental branch (Pillow swap
-# changed Pipfile without regenerating it, and pipenv isn't available to
-# do that outside a real build) - `pipenv lock` regenerates it at build
-# time instead. Fine for proving the change out; a real committed lock
-# should replace this once the change is settled.
+COPY Pipfile Pipfile.lock ./
 RUN pip install -U pipenv
-RUN pipenv lock && pipenv install --system
+RUN pipenv install --system
 
 RUN apt-get update && apt-get install -y --no-install-recommends nginx && apt-get clean && rm -rf /var/lib/apt/lists/*
 
