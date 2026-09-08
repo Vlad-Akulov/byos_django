@@ -1,0 +1,20 @@
+name: Test build (temporary - validates the slim-base Dockerfile fix)
+on:
+  push:
+    branches: [fix/slim-base-image]
+  workflow_dispatch: {}
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t byos-test .
+
+      - name: Smoke test - wand can actually find ImageMagick
+        run: docker run --rm byos-test python -c "import wand.image; wand.image.Image(width=10, height=10); print('wand + ImageMagick OK')"
+
+      - name: Smoke test - Django itself boots (settings/imports load cleanly)
+        run: docker run --rm -e DJANGO_SETTINGS_MODULE=core.settings byos-test python manage.py check --deploy || docker run --rm byos-test python manage.py check
