@@ -1,5 +1,7 @@
 name: Scan original Dockerfile (baseline for comparison)
 on:
+  push:
+    branches: [fix/slim-base-image]
   workflow_dispatch: {}
 
 jobs:
