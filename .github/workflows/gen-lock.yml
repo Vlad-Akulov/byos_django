@@ -1,0 +1,20 @@
+name: Generate Pipfile.lock
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [experiment/pillow-instead-of-wand]
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install pipenv
+      - run: pipenv lock
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pipfile-lock
+          path: Pipfile.lock
