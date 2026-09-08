@@ -1,5 +1,13 @@
 # TRMNL BYOS - Python / Django
 
+> [!WARNING]
+> **This is a personal fork of [usetrmnl/byos_django](https://github.com/usetrmnl/byos_django)
+> (upstream, unmaintained since April 2025), kept for one homelab's own deployment.**
+> Changes here beyond upstream are applied by an AI coding assistant (Claude) with
+> no human code review - functional for that one deployment, not vetted for
+> general use. If you're looking for the actively maintained official TRMNL BYOS
+> app, use [usetrmnl/terminus](https://github.com/usetrmnl/terminus) instead.
+
 This is an implementation of the TRMNL API in Python, which you can use your TRMNL device with.
 
 ## Installation
