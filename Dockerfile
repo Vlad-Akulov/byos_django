@@ -1,30 +1,23 @@
-# Slim, not the full image - confirmed via a live deployment that the only
-# reason the full image's package set mattered at all is ImageMagick
-# (installed explicitly below now), which `wand` needs at runtime via
-# ctypes/dlopen, not compiled in. Everything else the full image bundled
-# (perl, a full MariaDB client, GObject introspection tooling, etc.) was
-# unused bloat - each carrying its own share of CVEs for zero benefit.
+# Slim, not the full image - the full image's package set only ever
+# mattered for ImageMagick, and this image no longer uses it at all (see
+# trmnl/consumers.py, trmnl/models.py - Pillow replaced wand/ImageMagick
+# entirely, dropping perl/libraw/OpenEXR/glib-introspection along with it,
+# not just the CLI tools).
 FROM python:3.13-slim
 
 WORKDIR /src
 
 # done first so we can cache dependencies between code changes
-COPY Pipfile Pipfile.lock ./
+COPY Pipfile ./
+# Pipfile.lock isn't committed on this experimental branch (Pillow swap
+# changed Pipfile without regenerating it, and pipenv isn't available to
+# do that outside a real build) - `pipenv lock` regenerates it at build
+# time instead. Fine for proving the change out; a real committed lock
+# should replace this once the change is settled.
 RUN pip install -U pipenv
-RUN pipenv install --system
+RUN pipenv lock && pipenv install --system
 
-# libmagickwand-dev, not the `imagemagick` CLI package too: `wand` (see
-# Pipfile) is a ctypes binding straight to libMagickWand, and this codebase
-# never shells out to `convert`/`identify`/etc (confirmed - no subprocess
-# call to ImageMagick's CLI anywhere in the app) - the CLI tools were
-# always dead weight here, just less obviously than perl/libraw/OpenEXR.
-# Still need the -dev variant specifically (not just the runtime lib)
-# because ctypes.util.find_library() looks for the *unversioned* .so
-# symlink, which Debian only ships in the -dev package - confirmed via the
-# currently-deployed image's own installed package list.
-# --no-install-recommends so apt doesn't pull in anything beyond what
-# these actually require.
-RUN apt-get update && apt-get install -y --no-install-recommends nginx libmagickwand-dev && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends nginx && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY etc/nginx.conf /etc/nginx/sites-available/default
 

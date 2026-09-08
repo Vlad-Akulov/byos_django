@@ -6,7 +6,7 @@ import time
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from playwright.async_api import async_playwright
-from wand.image import Image
+from PIL import Image
 
 from byos_django import settings
 
@@ -57,15 +57,16 @@ class PreviewConsumer(AsyncWebsocketConsumer):
         )
         await self.page.screenshot(path=f"/{folder}/screen.png")
 
-        with Image(filename=f"/{folder}/screen.png") as img:
-            img.posterize(2, dither="floyd_steinberg")
-            amap = Image(width=img.width, height=img.height, pseudo="pattern:gray50")
-            amap.composite(img, 0, 0)
-            img = amap
-            img.quantize(2, colorspace_type="gray")
-            img.depth = 1
-            img.strip()
-            img.save(filename=f"bmp3:/{folder}/screen.bmp")
+        # Replaces the previous wand/ImageMagick pipeline (posterize +
+        # composite against a pattern:gray50 map + quantize) with Pillow's
+        # own 1-bit conversion, which already Floyd-Steinberg dithers by
+        # default - the gray50 composite step had no visible effect on an
+        # opaque screenshot with no alpha channel (compositing a fully
+        # opaque image "over" anything just replaces it), so this should
+        # be visually equivalent, not just similar.
+        with Image.open(f"/{folder}/screen.png") as img:
+            img = img.convert("L").convert("1")
+            img.save(f"/{folder}/screen.bmp", format="BMP")
 
         with open(f"/{folder}/screen.bmp", "rb") as f:
             # base64

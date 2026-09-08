@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from playwright.sync_api import sync_playwright
-from wand.image import Image
+from PIL import Image
 
 
 class Device(models.Model):
@@ -102,15 +102,12 @@ class Screen(models.Model):
             page.screenshot(path=f"/{folder}/screen.png")
             browser.close()
 
-        with Image(filename=f"/{folder}/screen.png") as img:
-            img.posterize(2, dither="floyd_steinberg")
-            amap = Image(width=img.width, height=img.height, pseudo="pattern:gray50")
-            amap.composite(img, 0, 0)
-            img = amap
-            img.quantize(2, colorspace_type="gray")
-            img.depth = 1
-            img.strip()
-            img.save(filename=f"bmp3:/{folder}/screen.bmp")
+        # See trmnl/consumers.py's PreviewConsumer for why this is
+        # equivalent to the previous wand/ImageMagick pipeline, not just
+        # similar to it.
+        with Image.open(f"/{folder}/screen.png") as img:
+            img = img.convert("L").convert("1")
+            img.save(f"/{folder}/screen.bmp", format="BMP")
 
         with open(f"/{folder}/screen.bmp", "rb") as f:
             self.screen = f.read()
