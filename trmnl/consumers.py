@@ -6,7 +6,7 @@ import time
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from playwright.async_api import async_playwright
-from wand.image import Image
+from PIL import Image
 
 from byos_django import settings
 
@@ -57,15 +57,18 @@ class PreviewConsumer(AsyncWebsocketConsumer):
         )
         await self.page.screenshot(path=f"/{folder}/screen.png")
 
-        with Image(filename=f"/{folder}/screen.png") as img:
-            img.posterize(2, dither="floyd_steinberg")
-            amap = Image(width=img.width, height=img.height, pseudo="pattern:gray50")
-            amap.composite(img, 0, 0)
-            img = amap
-            img.quantize(2, colorspace_type="gray")
-            img.depth = 1
-            img.strip()
-            img.save(filename=f"bmp3:/{folder}/screen.bmp")
+        # Replaces the previous wand/ImageMagick pipeline. dither=NONE is
+        # deliberate, not a default left in place - confirmed via a real
+        # side-by-side (see PR description): the display is a hard on/off
+        # panel, not one that benefits from a halftone dither pattern, so
+        # this matches the flat-threshold behavior the current production
+        # pipeline already produces (its own dither="floyd_steinberg" step
+        # gets discarded by a later quantize() call - confirmed live, not
+        # actually dithering today either) rather than introducing texture
+        # the display can't render as intended.
+        with Image.open(f"/{folder}/screen.png") as img:
+            img = img.convert("L").convert("1", dither=Image.Dither.NONE)
+            img.save(f"/{folder}/screen.bmp", format="BMP")
 
         with open(f"/{folder}/screen.bmp", "rb") as f:
             # base64

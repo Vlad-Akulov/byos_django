@@ -6,7 +6,7 @@ name = "pypi"
 [packages]
 Django = "~=5.2"
 playwright = "~=1.51.0"
-wand = "~=0.6.13"
+Pillow = "*"
 python-dotenv = "*"
 channels = {extras = ["daphne"], version = "*"}
 
@@ -14,4 +14,3 @@ channels = {extras = ["daphne"], version = "*"}
 
 [requires]
 python_version = "3.13"
-python_full_version = "3.13.2"
