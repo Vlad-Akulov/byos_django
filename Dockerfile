@@ -13,16 +13,18 @@ COPY Pipfile Pipfile.lock ./
 RUN pip install -U pipenv
 RUN pipenv install --system
 
-# imagemagick + libmagickwand-dev: `wand` (see Pipfile) is a ctypes binding
-# to ImageMagick, not a compiled extension - it needs the library present
-# at runtime, not just a build-time header. libmagickwand-dev specifically
-# (not just the runtime lib) because ctypes.util.find_library() looks for
-# the *unversioned* .so symlink, which Debian only ships in the -dev
-# package, not the runtime one - confirmed via the currently-deployed
-# image's own installed package list. --no-install-recommends so apt
-# doesn't pull in anything beyond what these two packages actually
-# require.
-RUN apt-get update && apt-get install -y --no-install-recommends nginx imagemagick libmagickwand-dev && apt-get clean && rm -rf /var/lib/apt/lists/*
+# libmagickwand-dev, not the `imagemagick` CLI package too: `wand` (see
+# Pipfile) is a ctypes binding straight to libMagickWand, and this codebase
+# never shells out to `convert`/`identify`/etc (confirmed - no subprocess
+# call to ImageMagick's CLI anywhere in the app) - the CLI tools were
+# always dead weight here, just less obviously than perl/libraw/OpenEXR.
+# Still need the -dev variant specifically (not just the runtime lib)
+# because ctypes.util.find_library() looks for the *unversioned* .so
+# symlink, which Debian only ships in the -dev package - confirmed via the
+# currently-deployed image's own installed package list.
+# --no-install-recommends so apt doesn't pull in anything beyond what
+# these actually require.
+RUN apt-get update && apt-get install -y --no-install-recommends nginx libmagickwand-dev && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY etc/nginx.conf /etc/nginx/sites-available/default
 
