@@ -1,0 +1,44 @@
+name: Build and push
+
+# Builds this repo's own Dockerfile and pushes to GHCR - moved here from
+# the separate Vlad-Akulov/trmnl-byos-build repo, which existed only
+# because that setup needed to check out someone else's (usetrmnl/
+# byos_django, dead upstream since April 2025) code from a repo we didn't
+# control. Now that this fork *is* the source, there's no reason to build
+# it from anywhere else.
+#
+# k8s-infrastructure's trmnl HelmRelease deploys whatever lands at
+# ghcr.io/vlad-akulov/trmnl-byos:latest - Renovate tracks digest updates
+# there the same way it does for every other :latest-pinned image.
+#
+# Runs on a plain GitHub-hosted runner, not a dedicated self-hosted scale
+# set like the old repo needed - this repo is public, so GitHub-hosted
+# minutes are free, and a hosted runner has none of the dind/MTU
+# workarounds the old private-repo self-hosted setup needed (not on the
+# cluster's overlay network at all).
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build
+        run: docker build -t ghcr.io/vlad-akulov/trmnl-byos:latest .
+
+      - name: Smoke test - image actually starts and Django boots clean
+        run: docker run --rm ghcr.io/vlad-akulov/trmnl-byos:latest python manage.py check
+
+      - name: Push
+        run: docker push ghcr.io/vlad-akulov/trmnl-byos:latest
