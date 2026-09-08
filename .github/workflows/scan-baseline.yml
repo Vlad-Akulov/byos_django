@@ -1,0 +1,22 @@
+name: Scan original Dockerfile (baseline for comparison)
+on:
+  workflow_dispatch: {}
+
+jobs:
+  scan-baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Build original image
+        run: docker build -t byos-original .
+      - name: Scan it
+        run: |
+          curl -sL https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz | tar xz trivy
+          ./trivy image --scanners vuln --severity CRITICAL,HIGH --format json --output /tmp/trivy-baseline.json byos-original
+          ./trivy image --scanners vuln --severity CRITICAL,HIGH byos-original
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trivy-baseline
+          path: /tmp/trivy-baseline.json
