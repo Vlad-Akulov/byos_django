@@ -7,9 +7,13 @@ name: Build and push
 # control. Now that this fork *is* the source, there's no reason to build
 # it from anywhere else.
 #
-# k8s-infrastructure's trmnl HelmRelease deploys whatever lands at
-# ghcr.io/vlad-akulov/trmnl-byos:latest - Renovate tracks digest updates
-# there the same way it does for every other :latest-pinned image.
+# Pushes a real version tag (v1.0.<run number>) alongside :latest. Purely
+# digest-pinned :latest tracking (k8s-infrastructure's original approach)
+# works but every Renovate PR just shows an opaque hash change - a real
+# tag gives Renovate (and anyone reading the PR) an actual "v1.0.12 ->
+# v1.0.13" to look at. github.run_number is monotonic and needs no manual
+# bookkeeping, unlike a real semver bump which would require deciding
+# major/minor/patch by hand on every push.
 #
 # Runs on a plain GitHub-hosted runner, not a dedicated self-hosted scale
 # set like the old repo needed - this repo is public, so GitHub-hosted
@@ -28,6 +32,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      IMAGE: ghcr.io/vlad-akulov/trmnl-byos
+      VERSION: v1.0.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,10 +42,12 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build
-        run: docker build -t ghcr.io/vlad-akulov/trmnl-byos:latest .
+        run: docker build -t "${IMAGE}:${VERSION}" -t "${IMAGE}:latest" .
 
       - name: Smoke test - image actually starts and Django boots clean
-        run: docker run --rm ghcr.io/vlad-akulov/trmnl-byos:latest python manage.py check
+        run: docker run --rm "${IMAGE}:${VERSION}" python manage.py check
 
       - name: Push
-        run: docker push ghcr.io/vlad-akulov/trmnl-byos:latest
+        run: |
+          docker push "${IMAGE}:${VERSION}"
+          docker push "${IMAGE}:latest"
